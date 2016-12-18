@@ -5,18 +5,38 @@ import numpy as np
 import cv2
 import threading
 from collections import deque
+import argparse
+
 
 def image_generator():
-    global img_buffer, buffer_lock, buffer_full, buffer_empty
+    global img_buffer, buffer_lock, buffer_full, buffer_empty, bw
     while True:
-        data = np.random.bytes(3*h*w)
-        img = np.frombuffer(data, dtype=np.uint8).reshape((h,w,3))
+        #if bw:
+        #    c = 1
+        #else:
+        #    c = 3
+        #data = np.random.bytes(h*w*c)
+        #img = np.frombuffer(data, dtype=np.uint8).reshape((h,w,c))
+        if bw:
+            data = np.random.bytes(h*w)
+            img = np.frombuffer(data, dtype=np.uint8).reshape((h,w))
+            img = np.dstack((img,img,img))
+        else:
+            data = np.random.bytes(h*w*3)
+            img = np.frombuffer(data, dtype=np.uint8).reshape((h,w,3))
         buffer_lock.acquire()
         while not len(img_buffer) < img_buffer.maxlen:
             buffer_full.wait()
         img_buffer.append(img)
         buffer_empty.notify()
         buffer_lock.release()
+
+
+# Parse command-line arguments 
+parser = argparse.ArgumentParser(description="Generates random pixels on the screen.")
+parser.add_argument('-b', action='store_true', help='black and white, instead of colors')
+args = parser.parse_args()
+bw = args.b
 
 winname = "screensaver"
 cv2.namedWindow(winname, cv2.WND_PROP_FULLSCREEN | cv2.WINDOW_OPENGL)          
