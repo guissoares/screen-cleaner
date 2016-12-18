@@ -9,14 +9,8 @@ import argparse
 
 
 def image_generator():
-    global img_buffer, buffer_lock, buffer_full, buffer_empty, bw
+    global img_buffer, buffer_lock, buffer_full, buffer_empty, bw, sat
     while True:
-        #if bw:
-        #    c = 1
-        #else:
-        #    c = 3
-        #data = np.random.bytes(h*w*c)
-        #img = np.frombuffer(data, dtype=np.uint8).reshape((h,w,c))
         if bw:
             data = np.random.bytes(h*w)
             img = np.frombuffer(data, dtype=np.uint8).reshape((h,w))
@@ -24,6 +18,8 @@ def image_generator():
         else:
             data = np.random.bytes(h*w*3)
             img = np.frombuffer(data, dtype=np.uint8).reshape((h,w,3))
+        if sat:
+            img = (255 * (img >> 7)).astype(np.uint8)
         buffer_lock.acquire()
         while not len(img_buffer) < img_buffer.maxlen:
             buffer_full.wait()
@@ -34,9 +30,11 @@ def image_generator():
 
 # Parse command-line arguments 
 parser = argparse.ArgumentParser(description="Generates random pixels on the screen.")
-parser.add_argument('-b', action='store_true', help='black and white, instead of colors')
+parser.add_argument('-b', '--bw', action='store_true', help='black and white, instead of colors')
+parser.add_argument('-s', '--saturated', action='store_true', help='saturated pixel intensities')
 args = parser.parse_args()
-bw = args.b
+bw = args.bw
+sat = args.saturated
 
 winname = "screensaver"
 cv2.namedWindow(winname, cv2.WND_PROP_FULLSCREEN | cv2.WINDOW_OPENGL)          
